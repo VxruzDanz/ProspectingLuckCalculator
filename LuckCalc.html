@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luck Drop Chance Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Background with image and black fade overlay */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url('images/ArtworkPlayNow.png') no-repeat center center/cover;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); /* black fade overlay */
+    z-index: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 1; /* above overlay */
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 30px;
+    width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+h1 { text-align: center; margin-bottom: 20px; color: #222; }
+label { display: block; margin-top: 10px; font-weight: 600; color: #333; }
+input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+input:focus { border-color: #4CAF50; outline: none; }
+button { width: 100%; padding: 12px; margin-top: 15px; border: none; border-radius: 8px; background: linear-gradient(90deg,#4CAF50,#45a049); color: white; font-weight: 600; cursor: pointer; transition: 0.3s; }
+button:hover { background: linear-gradient(90deg,#45a049,#3e8e41); transform: translateY(-2px); }
+.result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
+.result p { margin: 8px 0; font-weight: 500; }
+.result p#odds { font-weight: 700; color: #2E7D32; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Luck Drop Chance Calculator</h1>
+<label>Capacity: <input type="number" id="capacity" value="0" min="0"></label>
+<label>Luck: <input type="number" id="luck" value="0" min="0"></label>
+<label>Rarity Range (N): <input type="number" id="rarity" value="1" min="1"></label>
+<button onclick="calculate()">Calculate</button>
+
+<div class="result">
+<p id="items"></p>
+<p id="totalChance"></p>
+<p id="odds"></p>
+</div>
+</div>
+
+<script>
+function oreDropChance(capacity, luck, rarityRange, runs = 500) {
+    if (capacity < 0) throw "Capacity must be >= 0";
+    if (luck < 0) throw "Luck must be >= 0";
+    if (rarityRange <= 0) throw "Rarity Range must be > 0";
+
+    const items = Math.round(Math.sqrt(capacity));
+    const results = [];
+
+    for (let sim = 0; sim < runs; sim++) {
+        let totalProb = 0;
+
+        for (let i = 0; i < items; i++) {
+            const r = Math.random();
+            let effectiveLuck;
+            if (r < 0.2) effectiveLuck = 0; // skipped
+            else if (r < 0.5) effectiveLuck = luck * (0.1 + Math.random() * 0.5); // weakened 10–60%
+            else effectiveLuck = luck; // full
+
+            const pLuck = 1 - Math.pow((rarityRange - 1) / rarityRange, effectiveLuck);
+            totalProb += pLuck;
+        }
+
+        totalProb = Math.min(totalProb, 1.0);
+        results.push(totalProb);
+    }
+
+    // Average & stdev
+    const avg = results.reduce((a, b) => a + b, 0) / results.length;
+    const variance = results.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / results.length;
+    const stdev = Math.sqrt(variance);
+
+    const oneInX = avg <= 0 ? Infinity : 1 / avg;
+
+    return { items, avg, stdev, oneInX };
+}
+
+// Text scramble animation
+function animateText(element, finalText, intervalTime = 30) {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%., "; 
+    element.textContent = ""; 
+    const spans = [];
+
+    for (let i = 0; i < finalText.length; i++) {
+        const span = document.createElement('span');
+        span.textContent = letters[Math.floor(Math.random() * letters.length)];
+        element.appendChild(span);
+        spans.push(span);
+    }
+
+    let iteration = 0;
+    const maxIterations = 10;
+    const animInterval = setInterval(() => {
+        spans.forEach((span, index) => {
+            if (iteration > index && iteration <= maxIterations + index) {
+                span.textContent = letters[Math.floor(Math.random() * letters.length)];
+            }
+            if (iteration > maxIterations + index) {
+                span.textContent = finalText[index];
+            }
+        });
+        iteration++;
+        if (iteration > maxIterations + spans.length) clearInterval(animInterval);
+    }, intervalTime);
+}
+
+function formatPct(x) { return (x*100).toFixed(6) + "%"; }
+function formatOneIn(x) { if (!isFinite(x)) return "∞"; return "1 in " + Math.round(x).toLocaleString(); }
+
+function calculate() {
+    try {
+        const capacity = parseInt(document.getElementById("capacity").value);
+        const luck = parseInt(document.getElementById("luck").value);
+        const rarity = parseInt(document.getElementById("rarity").value);
+
+        const { items, avg, stdev, oneInX } = oreDropChance(capacity, luck, rarity);
+
+        animateText(document.getElementById("items"), `Items: ${items}`);
+        animateText(document.getElementById("totalChance"), `Estimated chance: ${formatPct(avg)} (±${formatPct(stdev)})`);
+        animateText(document.getElementById("odds"), `Odds (avg): ${formatOneIn(oneInX)}`);
+    } catch (e) {
+        alert(e);
+    }
+}
+</script>
+
+</body>
+</html>
