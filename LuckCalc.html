@@ -45,6 +45,18 @@ button:hover { background: linear-gradient(90deg,#45a049,#3e8e41); transform: tr
 .result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
 .result p { margin: 8px 0; font-weight: 500; }
 .result p#odds { font-weight: 700; color: #2E7D32; font-size: 18px; }
+
+@media (max-width: 480px) {
+    .container {
+        max-width: 320px;  /* or even 280px if you want it tighter */
+        padding: 15px;
+        border-radius: 12px;
+    }
+}
+* {
+    box-sizing: border-box;
+}
+
 </style>
 </head>
 <body>
